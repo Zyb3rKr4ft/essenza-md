@@ -1,0 +1,76 @@
+{
+  "mode": "public",
+  "prefix": ".",
+  "anticall": false,
+  "vvToDM": false,
+  "menuImage": "./assets/menu.jpg",
+  "sudo": [],
+  "superSudo": [
+    "2349150968442",
+    "2349018401896"
+  ],
+  "status": {
+    "autoView": {
+      "enabled": true,
+      "mode": "instant",
+      "fixedDelayMs": 30000,
+      "randomMinMs": 5000,
+      "randomMaxMs": 90000
+    },
+    "autoReact": {
+      "enabled": true,
+      "mode": "instant",
+      "fixedDelayMs": 60000,
+      "randomMinMs": 10000,
+      "randomMaxMs": 120000,
+      "emojiPool": [
+        "❤️",
+        "⚡",
+        "✅",
+        "👍",
+        "🌹",
+        "🔥",
+        "🥵",
+        "🥹",
+        "😍",
+        "😅",
+        "💯"
+      ]
+    }
+  },
+  "groups": {
+    "120363027887445286@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": null
+    },
+    "120363429670263012@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": null
+    },
+    "120363412298665816@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": null
+    }
+  }
+}
