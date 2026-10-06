@@ -11,6 +11,7 @@ const { handleStatus } = require('./lib/status');
 let settings = settingsLib.load();
 let commands = new Map();
 let isReconnecting = false;
+let schedulerInterval = null;
 
 const pluginsDir = path.join(__dirname, 'plugins');
 if (fs.existsSync(pluginsDir)) {
@@ -124,6 +125,51 @@ async function startEssenza() {
     }
 });
 
+// ─── Group lock/unlock scheduler ───
+if (schedulerInterval) clearInterval(schedulerInterval);
+schedulerInterval = setInterval(async () => {
+    try {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const currentTime = hh + ':' + mm;
+        const today = now.toISOString().split('T')[0];
+        let changed = false;
+
+        for (const jid of Object.keys(settings.groups || {})) {
+            const gs = settings.groups[jid];
+            const sch = gs.lockSchedule;
+            if (!sch) continue;
+
+            if (sch.lockAt === currentTime && sch.lastLock !== today) {
+                try {
+                    await sock.groupSettingUpdate(jid, 'announcement');
+                    sch.lastLock = today;
+                    changed = true;
+                    console.log('Auto-locked: ' + jid);
+                } catch (e) {
+                    console.error('Lock failed (' + jid + '):', e.message);
+                }
+            }
+
+            if (sch.unlockAt === currentTime && sch.lastUnlock !== today) {
+                try {
+                    await sock.groupSettingUpdate(jid, 'not_announcement');
+                    sch.lastUnlock = today;
+                    changed = true;
+                    console.log('Auto-unlocked: ' + jid);
+                } catch (e) {
+                    console.error('Unlock failed (' + jid + '):', e.message);
+                }
+            }
+        }
+
+        if (changed) settingsLib.save(settings);
+    } catch (e) {
+        console.error('Scheduler error:', e.message);
+    }
+}, 30000);
+
     sock.ev.on('connection.update', (u) => {
         const { connection, lastDisconnect } = u;
         if (connection === 'open') {
@@ -207,6 +253,22 @@ async function startEssenza() {
             commandCount: commands.size,
             startTime: Date.now(),
         };
+        if (!isGroup && isIncoming && settings.afk?.enabled && !isSudo) {
+    if (!Array.isArray(settings.afk.replied)) settings.afk.replied = [];
+    if (!settings.afk.replied.includes(realSender)) {
+        settings.afk.replied.push(realSender);
+        settingsLib.save(settings);
+        const mins = Math.floor((Date.now() - (settings.afk.since || Date.now())) / 60000);
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        const dur = h > 0 ? (h + 'h ' + m + 'm') : (m + 'm');
+        const baseMsg = settings.afk.message || '💤 I\'m away right now. I\'ll reply when I\'m back.';
+        try {
+            await sock.sendMessage(sender, { text: baseMsg + '\n\n⏱ Away for: ' + dur });
+        } catch (e) {}
+        return;
+    }
+}
 
         if (isIncoming || isGroup) {
             const g = await runGuards(sock, msg, ctx);
