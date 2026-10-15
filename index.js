@@ -7,6 +7,7 @@ const http = require('http');
 const config = require('./config');
 const settingsLib = require('./lib/settings');
 const { runGuards } = require('./lib/guards');
+const githubSession = require('./lib/github-session');
 const { handleStatus } = require('./lib/status');
 
 let settings = settingsLib.load();
@@ -46,6 +47,10 @@ async function react(sock, msg, emoji) {
 }
 
 async function startEssenza() {
+
+// Restore session from GitHub if local folder is empty
+await githubSession.restoreIfNeeded(config.sessionPath);
+
     const { state, saveCreds } = await baileys.useMultiFileAuthState(config.sessionPath);
 
     const sock = baileys.makeWASocket({
@@ -59,6 +64,11 @@ async function startEssenza() {
         defaultQueryTimeoutMs: 60000,
     });
 
+
+sock.ev.on('creds.update', async () => {
+    await saveCreds();
+    githubSession.pushSession(config.sessionPath);
+});
 
 if (!sock.authState.creds.registered) {
     const envNumber = (process.env.PAIRING_NUMBER || config.botNumber || '').replace(/[^0-9]/g, '');
