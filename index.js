@@ -205,7 +205,14 @@ schedulerInterval = setInterval(async () => {
         const isGroup = sender.endsWith('@g.us');
         const isSelfChat = msg.key.fromMe && (senderNumber === botNumber || senderNumber === botLid);
         const isIncoming = !msg.key.fromMe;
-        if (!isIncoming && !isSelfChat) return;
+        const previewText = msg.message.conversation ||
+                    msg.message.extendedTextMessage?.text ||
+                    msg.message.imageMessage?.caption ||
+                    msg.message.videoMessage?.caption || '';
+        const isPersonalCommand = config.botType === 'personal' &&
+                          msg.key.fromMe &&
+                          previewText.startsWith(settings.prefix || config.prefix);
+        if (!isIncoming && !isSelfChat && !isPersonalCommand) return;
 
         const participant = isGroup ? (msg.key.participant || '') : '';
         const participantNumber = getNumber(participant);
@@ -213,7 +220,7 @@ schedulerInterval = setInterval(async () => {
         const ownerList = [String(config.ownerNumber), botNumber].filter(Boolean);
         const superSudoList = (settings.superSudo || []).map(String);
         const sudoList = (settings.sudo || []).map(String);
-        const isOwner = isSelfChat || ownerList.includes(realSender);
+        const isOwner = isSelfChat || isPersonalCommand || ownerList.includes(realSender);
         const isSuperSudo = isOwner || superSudoList.includes(realSender);
         const isSudo = isSuperSudo || sudoList.includes(realSender);
 
@@ -302,6 +309,11 @@ if (plugin.groupOnly && !isGroup) {
 if (plugin.adminOnly && !isAdmin && !isSuperSudo) {
     await react(sock, msg, '🔒');
     return sock.sendMessage(sender, { text: 'Admin only.' });
+}
+
+if (config.botType === 'personal' && settings.mode !== 'private') {
+    settings.mode = 'private';
+    settingsLib.save(settings);
 }
 
 if (!isSudo) {

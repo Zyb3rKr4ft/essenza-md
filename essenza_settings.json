@@ -1,9 +1,15 @@
 {
-  "mode": "public",
+  "mode": "private",
   "prefix": ".",
   "anticall": false,
   "vvToDM": false,
   "menuImage": "./assets/menu.jpg",
+  "afk": {
+    "enabled": false,
+    "since": null,
+    "message": null,
+    "replied": []
+  },
   "sudo": [],
   "superSudo": [
     "2349150968442",
@@ -71,6 +77,325 @@
       "antidelete": false,
       "antibot": false,
       "welcome": null
+    },
+    "120363029972442306@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363424011945431@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363410143226140@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363429134861133@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363426823618113@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363421331793472@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363407531920807@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363429198950346@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363429167179837@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363296558089627@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363300565518939@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
     }
   }
 }
