@@ -3,6 +3,7 @@ const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const http = require('http');
 const config = require('./config');
 const settingsLib = require('./lib/settings');
 const { runGuards } = require('./lib/guards');
@@ -58,20 +59,31 @@ async function startEssenza() {
         defaultQueryTimeoutMs: 60000,
     });
 
-    sock.ev.on('creds.update', saveCreds);
 
-    if (!sock.authState.creds.registered) {
+if (!sock.authState.creds.registered) {
+    const envNumber = (process.env.PAIRING_NUMBER || config.botNumber || '').replace(/[^0-9]/g, '');
+    const requestCode = async (num) => {
+        if (!num) { console.error('No pairing number available.'); return; }
+        try {
+            await new Promise(r => setTimeout(r, 3000));
+            const code = await sock.requestPairingCode(num);
+            console.log('\n========================================');
+            console.log('PAIRING CODE: ' + code);
+            console.log('Number: +' + num);
+            console.log('========================================\n');
+        } catch (e) { console.error('Pairing failed:', e.message); }
+    };
+
+    if (envNumber) {
+        requestCode(envNumber);
+    } else {
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        rl.question('Enter WhatsApp number: ', async (input) => {
+        rl.question('Enter WhatsApp number: ', (input) => {
             rl.close();
-            const num = input.trim().replace(/[^0-9]/g, '');
-            try {
-                await new Promise(r => setTimeout(r, 3000));
-                const code = await sock.requestPairingCode(num);
-                console.log('\nPAIRING CODE: ' + code + '\n');
-            } catch (e) { console.error('Pairing failed:', e.message); process.exit(1); }
+            requestCode(input.trim().replace(/[^0-9]/g, ''));
         });
     }
+}    
 
    sock.ev.on('group-participants.update', async (event) => {
     try {
@@ -334,6 +346,19 @@ if (!isSudo) {
         }
     });
 }
+
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+        status: 'ok',
+        bot: config.botName,
+        version: config.version,
+        uptime: Math.floor(process.uptime())
+    }));
+}).listen(PORT, () => {
+    console.log('Health server on port ' + PORT);
+});
 
 startEssenza().catch(err => {
     console.error('Fatal error:', err);
