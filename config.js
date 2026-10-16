@@ -7,6 +7,6 @@ module.exports = {
     botType: 'personal',   // 'personal' or 'business'
     ownerName: 'Essenza',
     version: '1.0.0',
-    channelLink: '',
+    channelLink: 'Made With ❤️ For MiLady Essenza🌹🔥',
     sessionPath: './essenza_auth'
 };

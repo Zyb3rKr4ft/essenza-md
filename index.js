@@ -235,17 +235,34 @@ schedulerInterval = setInterval(async () => {
                           msg.key.fromMe &&
                           previewText.startsWith(settings.prefix || config.prefix);
         if (!isIncoming && !isSelfChat && !isPersonalCommand) return;
+const participant = isGroup ? (msg.key.participant || '') : '';
+const participantNumber = getNumber(participant);
+const senderPnNumber = getNumber(msg.key.senderPn || msg.key.remoteJidAlt || '');
+const participantPnNumber = getNumber(msg.key.participantPn || msg.key.participantAlt || '');
+const realSender = isSelfChat
+    ? botNumber
+    : (isGroup
+        ? (participantPnNumber || participantNumber)
+        : (senderPnNumber || senderNumber));
 
-        const participant = isGroup ? (msg.key.participant || '') : '';
-        const participantNumber = getNumber(participant);
-        const realSender = isSelfChat ? botNumber : (isGroup ? participantNumber : senderNumber);
-        const ownerList = [String(config.ownerNumber), botNumber].filter(Boolean);
-        const superSudoList = (settings.superSudo || []).map(String);
-        const sudoList = (settings.sudo || []).map(String);
-        const isOwner = isSelfChat || isPersonalCommand || ownerList.includes(realSender);
-        const isSuperSudo = isOwner || superSudoList.includes(realSender);
-        const isSudo = isSuperSudo || sudoList.includes(realSender);
+// Full debug — dump all key fields so we can see what WhatsApp sends
+console.log('RAW KEY: ' + JSON.stringify({
+    remoteJid: msg.key.remoteJid,
+    remoteJidAlt: msg.key.remoteJidAlt,
+    participant: msg.key.participant,
+    participantAlt: msg.key.participantAlt,
+    senderPn: msg.key.senderPn,
+    participantPn: msg.key.participantPn,
+    fromMe: msg.key.fromMe
+}));
+const ownerList = [String(config.ownerNumber), botNumber].filter(Boolean);
+const superSudoList = (settings.superSudo || []).map(String);
+const sudoList = (settings.sudo || []).map(String);
+const isOwner = isSelfChat || isPersonalCommand || ownerList.includes(realSender);
+const isSuperSudo = isOwner || superSudoList.includes(realSender);
+const isSudo = isSuperSudo || sudoList.includes(realSender);
 
+console.log('AUTH | realSender=' + realSender + ' | isOwner=' + isOwner + ' | isSuperSudo=' + isSuperSudo + ' | isSudo=' + isSudo);
         const text = msg.message.conversation ||
                      msg.message.extendedTextMessage?.text ||
                      msg.message.imageMessage?.caption ||

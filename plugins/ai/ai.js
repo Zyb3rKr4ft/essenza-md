@@ -1,65 +1,66 @@
 const fetch = globalThis.fetch;
 
-const MODELS = ['mistral-agent', 'pixtral', 'gpt-4o', 'claude-3', 'gemini'];
+async function askPollinations(prompt) {
+    const apiKey = process.env.POLLINATIONS_API_KEY || '';
+    const url = 'https://text.pollinations.ai/' + encodeURIComponent(prompt) +
+                '?model=openai&token=' + encodeURIComponent(apiKey);
+    const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+    if (!res.ok) throw new Error('Pollinations HTTP ' + res.status);
+    const text = await res.text();
+    if (!text || text.length < 2 || text.startsWith('<')) {
+        throw new Error('Pollinations returned empty/HTML');
+    }
+    return text.trim();
+}
 
-function tryParseNested(str) {
-    if (typeof str !== 'string') return null;
-    try { return JSON.parse(str); } catch (e) { return null; }
+async function askOmegaTech(prompt) {
+    const url = 'https://api.omegatech.app/api/ai/Secret?action=chat&message=' + encodeURIComponent(prompt);
+    const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+    if (!res.ok) throw new Error('OmegaTech HTTP ' + res.status);
+    const text = await res.text();
+    if (text.startsWith('<')) throw new Error('OmegaTech returned HTML');
+    const data = JSON.parse(text);
+    let reply = data?.data?.reply || data?.reply || data?.data?.result || data?.result || data?.message;
+    if (typeof reply === 'string' && reply.startsWith('{')) {
+        try { const p = JSON.parse(reply); reply = p.reply || p.result || p.message || reply; } catch (e) {}
+    }
+    return reply;
 }
 
 module.exports = {
     name: 'ai',
     category: 'ai',
-    description: 'Ask an AI model a question',
-    aliases: ['ask', 'chat'],
+    description: 'Ask an AI a question',
+    aliases: ['ask', 'chat', 'gpt'],
     async execute(sock, msg, args, ctx) {
-        let model = 'mistral-agent';
-        let prompt = args.join(' ').trim();
-
-        if (args[0] && MODELS.includes(args[0].toLowerCase())) {
-            model = args.shift().toLowerCase();
-            prompt = args.join(' ').trim();
-        }
-
+        const prompt = args.join(' ').trim();
         if (!prompt) {
-            const list = MODELS.map(m => '• ' + ctx.prefix + 'ai ' + m).join('\n');
             return sock.sendMessage(ctx.sender, {
-                text: '🤖 *AI Models*\n\n' + list + '\n\nUsage: ' + ctx.prefix + 'ai [model] <question>'
+                text: '🤖 Usage: ' + ctx.prefix + 'ai <question>\nExample: ' + ctx.prefix + 'ai explain gravity'
             });
         }
 
-        await sock.sendMessage(ctx.sender, { text: '🤖 Thinking with *' + model + '*...' });
+        await sock.sendMessage(ctx.sender, { text: '🤖 Thinking...' });
 
-        try {
-            const res = await fetch('https://api.omegatech.app/api/ai/All-Ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'chat', message: prompt, model: model })
-            });
+        const providers = [
+            { name: 'Pollinations', fn: askPollinations },
+            { name: 'OmegaTech', fn: askOmegaTech }
+        ];
 
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            console.log('AI RAW:', JSON.stringify(data, null, 2));
-
-            let candidate = data.reply || data.result || data.message || '';
-
-            // Unwrap nested JSON string once
-            const parsed = tryParseNested(candidate);
-            if (parsed && typeof parsed === 'object') {
-                if (parsed.reply && typeof parsed.reply === 'string') {
-                    candidate = parsed.reply;
-                } else if (parsed.result && typeof parsed.result === 'string') {
-                    candidate = parsed.result;
-                } else if (parsed.message && typeof parsed.message === 'string') {
-                    candidate = parsed.message;
-                }
+        let lastErr = null;
+        for (const p of providers) {
+            try {
+                const reply = await p.fn(prompt);
+                if (!reply || !reply.trim()) throw new Error('Empty reply');
+                console.log('AI OK (' + p.name + ')');
+                await sock.sendMessage(ctx.sender, { text: reply });
+                return;
+            } catch (e) {
+                console.log('AI ' + p.name + ' failed:', e.message);
+                lastErr = e;
             }
-
-            if (!candidate || !candidate.trim()) throw new Error('Empty reply.');
-
-            await sock.sendMessage(ctx.sender, { text: candidate });
-        } catch (e) {
-            await sock.sendMessage(ctx.sender, { text: '❌ AI Error: ' + e.message });
         }
+
+        await sock.sendMessage(ctx.sender, { text: '❌ All AI providers failed. Last: ' + (lastErr?.message || 'unknown') });
     }
 };
