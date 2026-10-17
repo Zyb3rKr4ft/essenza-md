@@ -1,6 +1,6 @@
 {
   "mode": "private",
-  "prefix": ".",
+  "prefix": "$",
   "anticall": false,
   "vvToDM": false,
   "menuImage": "./assets/menu.jpg",
@@ -13,7 +13,8 @@
   "sudo": [],
   "superSudo": [
     "2349150968442",
-    "2349018401896"
+    "2349018401896",
+    "2349130187353"
   ],
   "status": {
     "autoView": {
@@ -397,5 +398,10 @@
         "lastUnlock": null
       }
     }
-  }
+  },
+  "prefixes": [
+    ".",
+    "$",
+    "!"
+  ]
 }

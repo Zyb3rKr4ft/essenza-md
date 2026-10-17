@@ -1,45 +1,22 @@
+const yt = require('@denzy-official/youtube_scraper');
+const { exec } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const ytdl = require('@distube/ytdl-core');
 
-function extractUrl(text) {
-    const m = text.match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)[^\s&]+/i);
-    return m ? m[0] : null;
-}
-
-async function searchYt(query) {
-    const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
-    const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+function run(cmd) {
+    return new Promise((resolve, reject) => {
+        exec(cmd, { maxBuffer: 500 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
+            if (err) reject(new Error((stderr || err.message || '').split('\n').slice(-3).join(' | ')));
+            else resolve(stdout);
+        });
     });
-    const html = await res.text();
-    const matches = html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})".*?"title":\{"runs":\[\{"text":"([^"]+)"/g);
-    const first = matches.next();
-    if (!first.value) throw new Error('No search results');
-    return { url: 'https://www.youtube.com/watch?v=' + first.value[1], title: first.value[2] };
-}
-
-async function downloadVideo(videoUrl) {
-    const stamp = Date.now();
-    const outFile = path.join(os.tmpdir(), 'playvid_' + stamp + '.mp4');
-    const stream = ytdl(videoUrl, { filter: 'audioandvideo', quality: 'highest' });
-    await new Promise((resolve, reject) => {
-        const ws = fs.createWriteStream(outFile);
-        stream.pipe(ws);
-        ws.on('finish', resolve);
-        ws.on('error', reject);
-        stream.on('error', reject);
-    });
-    const buf = fs.readFileSync(outFile);
-    try { fs.unlinkSync(outFile); } catch (e) {}
-    return buf;
 }
 
 module.exports = {
     name: 'playvid',
     category: 'downloads',
-    description: 'Search YouTube and get the video (MP4)',
+    description: 'Search and download video from YouTube',
     aliases: ['video', 'ytvid'],
     async execute(sock, msg, args, ctx) {
         const input = args.join(' ').trim();
@@ -48,42 +25,58 @@ module.exports = {
         await sock.sendMessage(ctx.sender, { text: '🔍 Searching YouTube...' });
 
         try {
-            let videoUrl, title;
-            const urlFromInput = extractUrl(input);
-            if (urlFromInput) {
-                videoUrl = urlFromInput;
-                const info = await ytdl.getBasicInfo(videoUrl);
-                title = info.videoDetails.title;
-            } else {
-                const found = await searchYt(input);
-                videoUrl = found.url;
-                title = found.title;
+            const result = await yt.ytmp4(input);
+            if (!result.status || !result.download || !result.download.url) {
+                throw new Error('Could not extract video URL');
             }
 
-            await sock.sendMessage(ctx.sender, { text: '📺 *' + title + '*\n⬇️ Downloading video...' });
-            const buf = await downloadVideo(videoUrl);
-            const sizeMB = (buf.length / 1024 / 1024).toFixed(1);
-            console.log('Video: ' + sizeMB + ' MB');
+            const title = result.metadata.title || 'YouTube Video';
+            const videoUrl = result.download.url;
+            
+            await sock.sendMessage(ctx.sender, { text: `📺 *${title}*\n⬇️ Downloading & converting...` });
+
+            const res = await fetch(videoUrl, {
+                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                signal: AbortSignal.timeout(120000)
+            });
+            
+            if (!res.ok) throw new Error('Download failed: ' + res.status);
+            const rawBuffer = Buffer.from(await res.arrayBuffer());
+
+            const stamp = Date.now();
+            const rawFile = path.join(os.tmpdir(), `vid_raw_${stamp}.mp4`);
+            const finalFile = path.join(os.tmpdir(), `vid_final_${stamp}.mp4`);
+            fs.writeFileSync(rawFile, rawBuffer);
+
+            // Force H.264 and faststart so WhatsApp accepts it
+            await run(`ffmpeg -y -hide_banner -loglevel error -i "${rawFile}" -c:v libx264 -preset veryfast -crf 23 -c:a aac -movflags +faststart "${finalFile}"`);
+
+            const finalBuffer = fs.readFileSync(finalFile);
+            const sizeMB = (finalBuffer.length / 1024 / 1024).toFixed(1);
+            console.log('Video ready: ' + sizeMB + ' MB');
+
+            try { fs.unlinkSync(rawFile); } catch (e) {}
+            try { fs.unlinkSync(finalFile); } catch (e) {}
 
             const safeTitle = title.replace(/[^\w\s-]/g, '').slice(0, 60);
 
-            if (buf.length > 16 * 1024 * 1024) {
+            if (finalBuffer.length > 16 * 1024 * 1024) {
                 return sock.sendMessage(ctx.sender, {
-                    document: buf,
+                    document: finalBuffer,
                     mimetype: 'video/mp4',
                     fileName: safeTitle + '.mp4',
-                    caption: '📺 ' + title + ' (' + sizeMB + ' MB — exceeds video limit, sent as file)'
+                    caption: '📺 ' + title + ' (' + sizeMB + ' MB)'
                 });
             }
 
             await sock.sendMessage(ctx.sender, {
-                video: buf,
+                video: finalBuffer,
                 mimetype: 'video/mp4',
                 caption: '📺 ' + title,
                 fileName: safeTitle + '.mp4',
-                gifPlayback: false,
-                ptv: false
+                gifPlayback: false
             });
+            console.log('Video sent');
         } catch (e) {
             console.log('PlayVid error:', e.message);
             await sock.sendMessage(ctx.sender, { text: '❌ PlayVid Error: ' + e.message });
