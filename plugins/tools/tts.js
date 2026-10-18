@@ -1,74 +1,127 @@
-const fetch = globalThis.fetch;
+const { exec } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { synthesize } = require('@echristian/edge-tts');
+
+// Curated list of global voices using Edge TTS (Microsoft)
+const VOICES = {
+    // --- Nigerian Accents ---
+    'ng-female': { id: 'en-NG-EzinneNeural', desc: 'Nigerian Female' },
+    'ng-male': { id: 'en-NG-AbeoNeural', desc: 'Nigerian Male' },
+
+    // --- Ghanaian Accents ---
+    'gh-female': { id: 'en-GH-AmaNeural', desc: 'Ghanaian Female' },
+    'gh-male': { id: 'en-GH-KwameNeural', desc: 'Ghanaian Male' },
+
+    // --- Kenyan Accents ---
+    'ke-female': { id: 'en-KE-AsiliaNeural', desc: 'Kenyan Female' },
+    'ke-male': { id: 'en-KE-ChilembaNeural', desc: 'Kenyan Male' },
+
+    // --- South African Accents ---
+    'za-female': { id: 'af-ZA-AdriNeural', desc: 'South African Female (Afrikaans)' },
+    'za-male': { id: 'af-ZA-WillemNeural', desc: 'South African Male (Afrikaans)' },
+
+    // --- Arabic Accents ---
+    'ae-female': { id: 'ar-AE-FatimaNeural', desc: 'Arabic (UAE) Female' },
+    'ae-male': { id: 'ar-AE-HamdanNeural', desc: 'Arabic (UAE) Male' },
+    'eg-female': { id: 'ar-EG-SalmaNeural', desc: 'Arabic (Egypt) Female' },
+    'eg-male': { id: 'ar-EG-ShakirNeural', desc: 'Arabic (Egypt) Male' },
+
+    // --- UK & US Accents ---
+    'us-female': { id: 'en-US-AriaNeural', desc: 'US Female' },
+    'us-male': { id: 'en-US-GuyNeural', desc: 'US Male' },
+    'uk-female': { id: 'en-GB-SoniaNeural', desc: 'UK Female' },
+    'uk-male': { id: 'en-GB-RyanNeural', desc: 'UK Male' },
+    
+    // --- Indian & Australian Accents ---
+    'in-female': { id: 'en-IN-NeerjaNeural', desc: 'Indian Female' },
+    'in-male': { id: 'en-IN-PrabhatNeural', desc: 'Indian Male' },
+    'au-female': { id: 'en-AU-NatashaNeural', desc: 'Australian Female' },
+    'au-male': { id: 'en-AU-WilliamNeural', desc: 'Australian Male' }
+};
+
+function run(cmd) {
+    return new Promise((resolve, reject) => {
+        exec(cmd, { maxBuffer: 100 * 1024 * 1024 }, (err, stdout, stderr) => {
+            if (err) reject(new Error((stderr || err.message || '').split('\n').slice(-2).join(' | ')));
+            else resolve(stdout);
+        });
+    });
+}
+
+async function convertToOgg(inputBuffer) {
+    const stamp = Date.now();
+    const inFile = path.join(os.tmpdir(), `tts_in_${stamp}.mp3`);
+    const outFile = path.join(os.tmpdir(), `tts_out_${stamp}.ogg`);
+    fs.writeFileSync(inFile, inputBuffer);
+    
+    try {
+        await run(`ffmpeg -y -hide_banner -loglevel error -i "${inFile}" -c:a libopus -b:a 64k -ar 48000 -ac 1 -f ogg "${outFile}"`);
+        return fs.readFileSync(outFile);
+    } finally {
+        try { fs.unlinkSync(inFile); } catch (e) {}
+        try { fs.unlinkSync(outFile); } catch (e) {}
+    }
+}
 
 module.exports = {
     name: 'tts',
     category: 'tools',
-    description: 'Convert text to speech (voice note)',
+    description: 'Convert text to speech with global accents',
     aliases: ['speak', 'say'],
     async execute(sock, msg, args, ctx) {
-        // Basic parsing: .tts [voice] [language] <text>
-        let voice = 'woman1';
-        let language = 'English';
+        let voiceKey = 'ng-female'; // Default to Nigerian Female (since you loved it)
         let textArgs = args;
 
-        // Simple check for voice (e.g., woman1, man1)
-        if (args[0] && /^[a-zA-Z]+[0-9]$/.test(args[0])) {
-            voice = args[0];
+        if (args[0] && VOICES[args[0].toLowerCase()]) {
+            voiceKey = args[0].toLowerCase();
             textArgs = args.slice(1);
         }
 
-        // Simple check for language (if the next arg is a known language name)
-        const knownLanguages = ['English', 'Yoruba', 'Hausa', 'Igbo', 'French', 'Spanish', 'Arabic', 'Swahili'];
-        if (textArgs[0] && knownLanguages.includes(textArgs[0])) {
-            language = textArgs[0];
-            textArgs = textArgs.slice(1);
-        }
-
         const text = textArgs.join(' ').trim();
+
         if (!text) {
+            let voiceList = '🌍 *Available Global Voices:*\n\n';
+            for (const [key, val] of Object.entries(VOICES)) {
+                voiceList += `• \`${key}\` - ${val.desc}\n`;
+            }
             return sock.sendMessage(ctx.sender, { 
-                text: 'Usage: ' + ctx.prefix + 'tts [voice] [language] <text>\n' +
-                      'Example: ' + ctx.prefix + 'tts woman1 English Hello, how are you?\n' +
-                      'Example: ' + ctx.prefix + 'tts man1 Yoruba E kaaro' 
+                text: 'Usage: ' + ctx.prefix + 'tts [voice] <text>\n\n' + voiceList + '\nExample: ' + ctx.prefix + 'tts ng-male How far, my brother?' 
             });
         }
 
-        await sock.sendMessage(ctx.sender, { text: '🗣️ Generating audio...' });
+        await sock.sendMessage(ctx.sender, { text: `🗣️ Generating audio (${VOICES[voiceKey].desc})...` });
 
         try {
-            const apiUrl = `https://api.omegatech.app/api/ai/text2speech-v3?text=${encodeURIComponent(text)}&voice=${encodeURIComponent(voice)}&language=${encodeURIComponent(language)}`;
-            const res = await fetch(apiUrl, { 
-                headers: { 'User-Agent': 'Mozilla/5.0' },
-                signal: AbortSignal.timeout(60000) 
-            });
+            const voiceId = VOICES[voiceKey].id;
             
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            console.log('TTS RESPONSE:', JSON.stringify(data, null, 2));
+            // Generate audio using Microsoft Edge TTS
+            const { audio } = await synthesize({
+                text: text,
+                voice: voiceId,
+                outputFormat: 'audio-24khz-48kbitrate-mono-mp3'
+            });
 
-            if (!data.success || !data.audio) {
-                throw new Error('No audio URL returned from API');
-            }
-
-            const audioRes = await fetch(data.audio);
-            if (!audioRes.ok) throw new Error('Failed to download audio file');
-            const buffer = Buffer.from(await audioRes.arrayBuffer());
+            const rawBuffer = Buffer.from(audio);
+            const oggBuffer = await convertToOgg(rawBuffer);
+            console.log(`TTS (${voiceId}) generated: ` + (oggBuffer.length / 1024).toFixed(1) + ' KB');
 
             try {
                 await sock.sendMessage(ctx.sender, {
-                    audio: buffer,
-                    mimetype: 'audio/mp4',
-                    ptt: true, // Send as voice note
-                    fileName: 'tts.mp3'
+                    audio: oggBuffer,
+                    mimetype: 'audio/ogg; codecs=opus',
+                    ptt: true,
+                    fileName: 'tts.ogg'
                 });
                 console.log('TTS sent as voice note');
             } catch (sendErr) {
-                console.log('Voice note failed, sending as document:', sendErr.message);
+                console.log('Voice note failed, sending as normal audio:', sendErr.message);
                 await sock.sendMessage(ctx.sender, {
-                    document: buffer,
-                    mimetype: 'audio/mp3',
-                    fileName: 'tts.mp3',
-                    caption: '🗣️ ' + text
+                    audio: oggBuffer,
+                    mimetype: 'audio/ogg; codecs=opus',
+                    ptt: false,
+                    fileName: 'tts.ogg'
                 });
             }
 

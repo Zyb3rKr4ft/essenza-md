@@ -180,7 +180,12 @@ async function startEssenza() {
         }
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
-            if (code === baileys.DisconnectReason.loggedOut) { console.log('Logged out.'); process.exit(0); }
+         if (code === baileys.DisconnectReason.loggedOut) { console.log('Logged out.'); process.exit(0); }
+          if (code === 428) {
+        console.log('Connection dropped (428). Reconnecting in 5 seconds...');
+        setTimeout(startEssenza, 5000);
+          return;
+       }
             if (code === baileys.DisconnectReason.restartRequired) {
                 if (!isReconnecting) { isReconnecting = true; startEssenza(); }
                 return;
