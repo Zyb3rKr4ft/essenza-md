@@ -19,6 +19,7 @@
     "btch-downloader": "^6.4.0",
     "google-tts-api": "^2.0.2",
     "pino": "^10.3.1",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "qrcode": "^1.5.4"
   }
 }

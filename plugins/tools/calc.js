@@ -6,19 +6,32 @@ module.exports = {
     async execute(sock, msg, args, ctx) {
         const expr = args.join(' ').trim();
         if (!expr) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'calc 2 + 2 * 3' });
-        if (!/^[0-9+\-*/().%\s^]+$/.test(expr)) {
-            return sock.sendMessage(ctx.sender, { text: '❌ Only numbers and + - * / ( ) % ^ allowed.' });
+
+        // Only allow numbers, math operators, and basic functions
+        if (!/^[0-9+\-*/().%\s^a-z]+$/i.test(expr)) {
+            return sock.sendMessage(ctx.sender, { text: '❌ Invalid characters in expression.' });
         }
-        const safe = expr.replace(/\^/g, '**');
-        let result;
+
         try {
-            result = Function('"use strict"; return (' + safe + ')')();
+            // Replace common math functions with JS equivalents
+            let safeExpr = expr
+                .replace(/\^/g, '**')
+                .replace(/sqrt/gi, 'Math.sqrt')
+                .replace(/sin/gi, 'Math.sin')
+                .replace(/cos/gi, 'Math.cos')
+                .replace(/tan/gi, 'Math.tan')
+                .replace(/pi/gi, 'Math.PI');
+
+            // Evaluate
+            const result = Function('"use strict"; return (' + safeExpr + ')')();
+            
+            if (typeof result !== 'number' || !isFinite(result)) {
+                throw new Error('Result is not a valid number');
+            }
+
+            await sock.sendMessage(ctx.sender, { text: '🧮 ' + expr + ' = *' + result + '*' });
         } catch (e) {
-            return sock.sendMessage(ctx.sender, { text: '❌ Invalid expression.' });
+            await sock.sendMessage(ctx.sender, { text: '❌ Invalid math expression.' });
         }
-        if (typeof result !== 'number' || !isFinite(result)) {
-            return sock.sendMessage(ctx.sender, { text: '❌ Not a valid number.' });
-        }
-        await sock.sendMessage(ctx.sender, { text: '🧮 ' + expr + ' = *' + result + '*' });
     }
 };
