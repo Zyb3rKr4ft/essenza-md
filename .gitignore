@@ -1,0 +1,6 @@
+node_modules/
+essenza_auth/
+essenza_settings.json
+*.log
+assets/menu.jpg
+.env
