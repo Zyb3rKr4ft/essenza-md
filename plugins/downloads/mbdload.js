@@ -3,54 +3,59 @@ const fetch = globalThis.fetch;
 module.exports = {
     name: 'download',
     category: 'downloads',
-    description: 'Download a movie from the MovieBox search results',
+    description: 'Get the stream/download link for a MovieBox result',
     aliases: ['dl'],
     async execute(sock, msg, args, ctx) {
         const choice = parseInt(args[0]);
+        const season = parseInt(args[1]) || 0;
+        const episode = parseInt(args[2]) || 0;
+
         if (!choice || !global.movieboxCache || !global.movieboxCache[choice]) {
             return sock.sendMessage(ctx.sender, { text: '❌ Invalid choice. Please search first using ' + ctx.prefix + 'moviebox <name>' });
         }
 
         const movie = global.movieboxCache[choice];
-        await sock.sendMessage(ctx.sender, { text: `⏳ Fetching download links for *${movie.title}*...` });
+        
+        let statusMsg = `⏳ Fetching download links for *${movie.title}*`;
+        if (season > 0) statusMsg += ` (S${season} E${episode})`;
+        await sock.sendMessage(ctx.sender, { text: statusMsg + '...' });
 
         try {
-            // 1. Get the details to find the download links
-            const detailUrl = `https://api.omegatech.app/api/movie/MovieBox-pro?action=detail&keyword=&subjectId=${movie.subjectId}&detailPath=${encodeURIComponent(movie.detailPath)}`;
-            const res = await fetch(detailUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(30000) });
+            // Fetch the download endpoint
+            const dlUrl = `https://api.omegatech.app/api/movie/MovieBox-pro?action=download&subjectId=${movie.subjectId}&detailPath=${encodeURIComponent(movie.detailPath)}&se=${season}&ep=${episode}`;
+            const res = await fetch(dlUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(30000) });
             const data = await res.json();
 
-            console.log('MB DETAIL RESPONSE:', JSON.stringify(data).slice(0, 500)); // Truncated log
-
-            if (!data.success || !data.data) {
-                throw new Error('Failed to fetch movie details.');
+            if (!data.success || !data.qualities || data.qualities.length === 0) {
+                throw new Error('No download links available for this selection.');
             }
 
-            // The API might return the stream directly in the detail, or require another call.
-            // Assuming it returns a list of qualities/downloads:
-            const media = data.data;
-            
-            // Look for download links in the response structure
-            let downloadUrl = null;
-            
-            // (This part depends heavily on the exact JSON structure the API returns. 
-            // We are looking for an MP4 or HLS link)
-            if (media.streamUrl) downloadUrl = media.streamUrl;
-            else if (media.downloadUrl) downloadUrl = media.downloadUrl;
-            else if (media.qualities && media.qualities.length > 0) downloadUrl = media.qualities[0].url;
+            // Extract the best quality
+            const best = data.bestQuality || data.qualities[0];
+            const streamUrl = best.streamUrl || best.downloadUrl;
+            const sizeMB = (parseInt(best.size) / 1024 / 1024).toFixed(1);
 
-            if (!downloadUrl) {
-                // If we can't find a direct MP4, we send the details so you can see what the API returned
-                await sock.sendMessage(ctx.sender, { 
-                    text: `⚠️ Could not find a direct download link.\n\nThe API returned this data:\n\n${JSON.stringify(media).slice(0, 400)}...` 
+            let text = `🎬 *${movie.title}*\n`;
+            if (season > 0) text += `📺 Season ${season} • Episode ${episode}\n`;
+            text += `📥 *Quality:* ${best.quality} (${sizeMB} MB)\n\n`;
+            
+            text += `▶️ *Watch / Stream Link:*\n${streamUrl}\n\n`;
+
+            // Add subtitles if available
+            if (data.subtitles && data.subtitles.length > 0) {
+                text += `📝 *Subtitles Available:*\n`;
+                // Just list a few common ones
+                const common = ['en', 'ar', 'fr', 'es', 'pt'];
+                const available = data.subtitles.filter(s => common.includes(s.languageCode));
+                available.forEach(sub => {
+                    text += `• ${sub.language}: ${sub.url}\n`;
                 });
-                return;
+                if (available.length === 0) text += `• ${data.subtitles.length} languages available (check web).`;
             }
 
-            // Send the link to the user
-            await sock.sendMessage(ctx.sender, { 
-                text: `🎬 *${movie.title}*\n\n📥 *Download Link:*\n${downloadUrl}\n\n_(Note: MovieBox links expire quickly. Open this on your phone browser to download.)_` 
-            });
+            text += `\n_Note: Copy the link to your browser or VLC to watch._`;
+
+            await sock.sendMessage(ctx.sender, { text: text });
 
         } catch (e) {
             console.log('MB Download error:', e.message);
