@@ -172,11 +172,13 @@ async function startEssenza() {
     }, 30000);
 
     // Connection Update
-    sock.ev.on('connection.update', (u) => {
+    sock.ev.on('connection.update', async (u) => {
         const { connection, lastDisconnect } = u;
         if (connection === 'open') {
             console.log('Essenza MD connected. Mode: ' + settings.mode + ' | Prefix: ' + settings.prefixes.join(' '));
             isReconnecting = false;
+             // Trigger the notification
+        await sendReconnectNotification(sock, settings, config);
         }
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
@@ -378,6 +380,51 @@ process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
 });
 
+async function sendReconnectNotification(sock, settings, config) {
+    const targetJids = new Set();
+    
+    // Add Owner
+    if (config.ownerNumber) targetJids.add(`${config.ownerNumber}@s.whatsapp.net`);
+    
+    // Add Super-Sudo and Sudo users
+    for (const num of [...(settings.superSudo || []), ...(settings.sudo || [])]) {
+        targetJids.add(`${num}@s.whatsapp.net`);
+    }
+
+    const uptime = Math.floor(process.uptime());
+    const mem = (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(1);
+    const prefix = settings.prefixes ? settings.prefixes[0] : '.';
+    
+    const text = `🤖 *Essenza MD is Back Online!*\n\n` +
+                 `🕒 *Uptime:* ${uptime} seconds\n` +
+                 `💾 *RAM:* ${mem} MB\n` +
+                 `⚙️ *Mode:* ${settings.mode}\n` +
+                 `🔤 *Prefix:* ${settings.prefixes.join(' ')}\n\n` +
+                 `Select an option below:`;
+
+    // We use Baileys' built-in buttons
+    const buttons = [
+        { buttonId: `${prefix}ping`, buttonText: { displayText: '🏓 Ping' }, type: 1 },
+        { buttonId: `${prefix}owner`, buttonText: { displayText: '👤 Owner' }, type: 1 },
+        { buttonId: `${prefix}menu`, buttonText: { displayText: '📋 Menu' }, type: 1 }
+    ];
+
+    for (const jid of targetJids) {
+        try {
+            await sock.sendMessage(jid, { 
+                text: text,
+                footer: '*⚡ FAST • STABLE • POWERFUL*\n | _ Powered by @ZyberDevPriest™_',
+                buttons: buttons,
+                headerType: 1
+            });
+            console.log(`✅ Reconnect notification sent to ${jid}`);
+        } catch (e) {
+            console.error(`❌ Failed to send buttons to ${jid}:`, e.message);
+            // Fallback: Send plain text if buttons fail
+            await sock.sendMessage(jid, { text: text });
+        }
+    }
+}
 startEssenza().catch(err => {
     console.error('Fatal error:', err);
     process.exit(1);
