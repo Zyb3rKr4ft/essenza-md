@@ -3,58 +3,74 @@ const fetch = globalThis.fetch;
 module.exports = {
     name: 'moviebox',
     category: 'downloads',
-    description: 'Search for movies and series on MovieBox',
-    aliases: ['mb', 'mbsearch'],
+    description: 'Search for movies (MovieBox + Net9ja fallback)',
+    aliases: ['mb', 'movie'],
     async execute(sock, msg, args, ctx) {
         const query = args.join(' ').trim();
         if (!query) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'moviebox <movie name>' });
 
-        await sock.sendMessage(ctx.sender, { text: '🎬 Searching MovieBox for "' + query + '"...' });
+        await sock.sendMessage(ctx.sender, { text: '🎬 Searching for "' + query + '"...' });
 
         try {
-            const apiUrl = `https://api.omegatech.app/api/movie/MovieBox-pro?action=search&keyword=${encodeURIComponent(query)}`;
-            const res = await fetch(apiUrl, { 
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                signal: AbortSignal.timeout(30000) 
-            });
-            const data = await res.json();
+            // 1. Try MovieBox
+            let apiUrl = `https://api.omegatech.app/api/movie/MovieBox-pro?action=search&keyword=${encodeURIComponent(query)}`;
+            let res = await fetch(apiUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
+            let data = await res.json();
 
-            if (!data.success || !data.data || !data.data.results || data.data.results.length === 0) {
-                return sock.sendMessage(ctx.sender, { text: '❌ No results found for "' + query + '"' });
+            let results = data?.data?.results || [];
+
+            // 2. Fallback to Net9ja if MovieBox fails
+            if (results.length === 0) {
+                console.log('MovieBox returned 0 results, falling back to Net9ja...');
+                apiUrl = `https://api.omegatech.app/api/movie/net9ja?action=search&query=${encodeURIComponent(query)}`;
+                res = await fetch(apiUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(15000) });
+                data = await res.json();
+                
+                // Net9ja response structure is slightly different
+                results = data?.data?.results || data?.results || [];
             }
 
-            const results = data.data.results.slice(0, 5);
-            let text = `🎬 *MovieBox Results for "${query}"*\n\n`;
+            if (results.length === 0) {
+                return sock.sendMessage(ctx.sender, { text: '❌ No results found for "' + query + '" on either MovieBox or Net9ja.' });
+            }
 
-            results.forEach((item, index) => {
+            const topResults = results.slice(0, 5);
+            let text = `🎬 *Search Results for "${query}"*\n\n`;
+
+            topResults.forEach((item, index) => {
                 const year = item.releaseDate ? item.releaseDate.split('-')[0] : 'N/A';
                 const type = item.subjectType === 2 ? '📺 Series' : '🎥 Movie';
+                
+                // MovieBox uses item.cover.url, Net9ja uses item.poster
+                const poster = item.cover?.url || item.poster;
+                
                 text += `${index + 1}. *${item.title}* (${year})\n`;
                 text += `   ${type} | ⭐ ${item.imdbRatingValue || 'N/A'}\n\n`;
             });
-            
-            const coverUrl = results[0].cover?.url;
 
-            if (coverUrl) {
+            // Try to send the poster of the first result
+            const firstPoster = topResults[0].cover?.url || topResults[0].poster;
+
+            if (firstPoster) {
                 try {
-                    // ADDED USER-AGENT HEADER TO BYPASS CDN BLOCK
-                    const imgRes = await fetch(coverUrl, {
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+                    const imgRes = await fetch(firstPoster, {
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
                     });
-                    if (!imgRes.ok) throw new Error('CDN returned ' + imgRes.status);
-                    const buffer = Buffer.from(await imgRes.arrayBuffer());
-                    await sock.sendMessage(ctx.sender, { image: buffer, caption: text });
-                    return;
+                    if (imgRes.ok) {
+                        const buffer = Buffer.from(await imgRes.arrayBuffer());
+                        await sock.sendMessage(ctx.sender, { image: buffer, caption: text });
+                        return;
+                    }
                 } catch (e) {
-                    console.log('Moviebox cover failed:', e.message);
+                    console.log('Cover image failed to download');
                 }
             }
 
             await sock.sendMessage(ctx.sender, { text: text });
 
         } catch (e) {
-            console.log('MovieBox error:', e.message);
-            await sock.sendMessage(ctx.sender, { text: '❌ MovieBox Error: ' + e.message });
+            console.log('Movie search error:', e.message);
+            await sock.sendMessage(ctx.sender, { text: '❌ Error: ' + e.message });
         }
     }
 };
