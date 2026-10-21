@@ -380,6 +380,7 @@ process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
 });
 
+
 async function sendReconnectNotification(sock, settings, config) {
     const targetJids = new Set();
     
@@ -402,25 +403,34 @@ async function sendReconnectNotification(sock, settings, config) {
                  `🔤 *Prefix:* ${settings.prefixes.join(' ')}\n\n` +
                  `Select an option below:`;
 
-    // We use Baileys' built-in buttons
+    // THIS IS THE FIX: We use "interactiveButtons" and the "quick_reply" name
     const buttons = [
-        { buttonId: `${prefix}ping`, buttonText: { displayText: '🏓 Ping' }, type: 1 },
-        { buttonId: `${prefix}owner`, buttonText: { displayText: '👤 Owner' }, type: 1 },
-        { buttonId: `${prefix}menu`, buttonText: { displayText: '📋 Menu' }, type: 1 }
+        { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "🏓 Ping", id: `${prefix}ping` }) 
+        },
+        { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "👤 Owner", id: `${prefix}owner` }) 
+        },
+        { 
+            name: "quick_reply", 
+            buttonParamsJson: JSON.stringify({ display_text: "📋 Menu", id: `${prefix}menu` }) 
+        }
     ];
 
     for (const jid of targetJids) {
         try {
+            // Send using the new interactive format
             await sock.sendMessage(jid, { 
                 text: text,
-                footer: '*⚡ FAST • STABLE • POWERFUL*\n | _ Powered by @ZyberDevPriest™_',
-                buttons: buttons,
-                headerType: 1
+                footer: '*⚡ FAST • STABLE • POWERFUL*\n_Powered by @ZyberDevPriest™_', 
+                interactiveButtons: buttons
             });
             console.log(`✅ Reconnect notification sent to ${jid}`);
         } catch (e) {
             console.error(`❌ Failed to send buttons to ${jid}:`, e.message);
-            // Fallback: Send plain text if buttons fail
+            // Fallback: If buttons fail, send the text anyway
             await sock.sendMessage(jid, { text: text });
         }
     }

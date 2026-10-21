@@ -10,24 +10,22 @@ module.exports = {
         
         const text = `🏓 Pong! ${ctx.config.botName} is Active ⚡.\n\n⚡ Latency: ${latency}ms\n📡 Response: ${response}ms`;
 
+        // 👇 PUT YOUR IMAGE URL HERE 👇
+        const customImageUrl = 'https://files.catbox.moe/uld5m1.png'; 
+
         try {
-            // Attempt to fetch the bot's profile picture
-            const ppUrl = await sock.profilePictureUrl(sock.user.id, 'image');
-            
-            // If successful, send the image with the text as the caption
-            if (ppUrl) {
+            if (customImageUrl && customImageUrl.startsWith('http')) {
                 await sock.sendMessage(ctx.sender, { 
-                    image: { url: ppUrl }, 
+                    image: { url: customImageUrl }, 
                     caption: text 
                 });
                 return;
             }
         } catch (e) {
-            // Silently catch errors (e.g., if the bot has no PP set)
-            console.log('Could not fetch bot PP for ping command.');
+            console.log('Failed to send custom ping image:', e.message);
         }
 
-        // Fallback: If no PP or if fetching failed, just send the text
+        // Fallback if the URL is broken or missing
         await sock.sendMessage(ctx.sender, { text: text });
     }
 };
