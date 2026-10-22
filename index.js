@@ -19,6 +19,7 @@ if (!Array.isArray(settings.prefixes)) {
 }
 
 let commands = new Map();
+const msgCache = new Map();
 let isReconnecting = false;
 let schedulerInterval = null;
 
@@ -202,12 +203,45 @@ async function startEssenza() {
         if (type !== 'notify') return;
         const msg = messages[0];
         if (!msg.message) return;
+  
+ // Anti-Delete Cache
+   if (msg.message && !msg.key.fromMe) {
+     msgCache.set(msg.key.id, msg);
+      if (msgCache.size > 1000) msgCache.delete(msgCache.keys().next().value); // Keep memory low
+    }
 
         if (msg.key.remoteJid === 'status@broadcast') {
             await handleStatus(sock, msg, settings, () => settingsLib.save(settings));
             return;
         }
 
+  sock.ev.on('messages.update', async (updates) => {
+    for (const update of updates) {
+        if (update.update.message === null) { // Message was deleted
+            const deletedMsg = msgCache.get(update.key.id);
+            if (!deletedMsg) continue;
+            
+            const chatId = update.key.remoteJid;
+            const isGroup = chatId.endsWith('@g.us');
+            
+            if (isGroup) {
+                const gs = settingsLib.getGroup(settings, chatId);
+                if (gs.antidelete) {
+                    let text = `🚨 *Anti-Delete Detected!*\n\n`;
+                    text += `👤 *Sender:* @${deletedMsg.key.participant?.split('@')[0] || deletedMsg.key.remoteJid.split('@')[0]}\n`;
+                    
+                    const content = deletedMsg.message.conversation || deletedMsg.message.extendedTextMessage?.text || '[Media Message]';
+                    text += `💬 *Message:* ${content}`;
+
+                    await sock.sendMessage(chatId, { 
+                        text: text, 
+                        mentions: [deletedMsg.key.participant || deletedMsg.key.remoteJid] 
+                    });
+                }
+            }
+        }
+    }
+});
         const sender = msg.key.remoteJid || '';
         const senderNumber = getNumber(sender);
         const botNumber = getNumber(sock.user?.id);
