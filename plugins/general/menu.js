@@ -55,7 +55,7 @@ module.exports = {
         if (ctx.config.channelLink) {
             out += '┃ 📢 ' + ctx.config.channelLink + '\n';
         }
-        out += '┃ _Powered by Essenza Labs_\n';
+        out += '┃ _Powered by *ZyberDevPriest*_\n';
         out += '╰━━━━━━━━━━━━━━━┈⊷';
 
         const img = ctx.settings.menuImage;

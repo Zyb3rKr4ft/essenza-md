@@ -397,6 +397,216 @@
         "lastLock": null,
         "lastUnlock": null
       }
+    },
+    "120363412557216007@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363430841930252@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363428298195496@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363027832208201@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363328475718675@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363430914219093@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
+    },
+    "120363412029029635@g.us": {
+      "antilink": false,
+      "antispam": false,
+      "antibadwords": {
+        "enabled": false,
+        "words": []
+      },
+      "antidelete": false,
+      "antibot": false,
+      "welcome": {
+        "enabled": false,
+        "message": null
+      },
+      "goodbye": {
+        "enabled": false,
+        "message": null
+      },
+      "antiurl": {
+        "enabled": false,
+        "domains": []
+      },
+      "muted": [],
+      "warnings": {},
+      "lockSchedule": {
+        "lockAt": null,
+        "unlockAt": null,
+        "lastLock": null,
+        "lastUnlock": null
+      }
     }
   },
   "prefixes": [

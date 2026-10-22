@@ -4,3 +4,7 @@ essenza_settings.json
 *.log
 assets/menu.jpg
 .env
+ffprobe
+ffmpeg
+yt-dlp
+*.tar.xz

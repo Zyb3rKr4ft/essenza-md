@@ -443,14 +443,14 @@ async function sendReconnectNotification(sock, settings, config) {
     ];
 
     // 👇 REPLACE THIS WITH YOUR IMAGE URL (Must be a static JPG/PNG) 👇
-    const customImageUrl = 'https://i.imgur.com/your-image-link.jpg';
+    const customImageUrl = 'https://files.catbox.moe/uld5m1.png';
 
     for (const jid of targetJids) {
         try {
             await sock.sendMessage(jid, { 
                 image: { url: customImageUrl },
                 caption: text, // Note: For images, 'text' becomes 'caption'
-                footer: '*⚡ FAST • STABLE • POWERFUL*\n_Powered by @ZyberDevPriest™_', 
+                footer: '*⚡ FAST • 💯 STABLE • 💪 POWERFUL*\n_Powered by @ZyberDevPriest™_', 
                 interactiveButtons: buttons
             });
             console.log(`✅ Reconnect notification sent to ${jid}`);
@@ -461,7 +461,7 @@ async function sendReconnectNotification(sock, settings, config) {
             try {
                 await sock.sendMessage(jid, { 
                     text: text, 
-                    footer: '*⚡ FAST • STABLE • POWERFUL*\n_Powered by @ZyberDevPriest™_', 
+                    footer: '*⚡ FAST • 💯 STABLE • 💪 POWERFUL*\n_Powered by ZyberDevPriest™_', 
                     interactiveButtons: buttons 
                 });
             } catch (fallbackErr) {

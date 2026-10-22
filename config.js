@@ -5,8 +5,8 @@ module.exports = {
     ownerNumber: '2347076436201',
     botNumber: '2347076436201',
     botType: 'personal',   // 'personal' or 'business'
-    ownerName: 'Essenza',
+    ownerName: '> *@ZyberDevPriest*',
     version: '1.0.0',
-    channelLink: 'Made With ❤️ For MiLady Essenza🌹🔥',
+    channelLink: '*Made With ❤️ For MiLady Essenza🌹🔥*',
     sessionPath: './essenza_auth'
 };
