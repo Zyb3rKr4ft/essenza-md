@@ -175,12 +175,15 @@ async function startEssenza() {
     // Connection Update
     sock.ev.on('connection.update', async (u) => {
         const { connection, lastDisconnect } = u;
-        if (connection === 'open') {
-            console.log('Essenza MD connected. Mode: ' + settings.mode + ' | Prefix: ' + settings.prefixes.join(' '));
-            isReconnecting = false;
-             // Trigger the notification
+  if (connection === 'open') {
+    console.log('Essenza MD connected. Mode: ' + settings.mode + ' | Prefix: ' + settings.prefixes.join(' '));
+    isReconnecting = false;
+    
+    // ONLY send if notifications are enabled in settings
+    if (settings.reconnectNotification !== false) {
         await sendReconnectNotification(sock, settings, config);
-        }
+    }
+}
         if (connection === 'close') {
             const code = lastDisconnect?.error?.output?.statusCode;
          if (code === baileys.DisconnectReason.loggedOut) { console.log('Logged out.'); process.exit(0); }
@@ -417,10 +420,7 @@ process.on('uncaughtException', (err) => {
 async function sendReconnectNotification(sock, settings, config) {
     const targetJids = new Set();
     
-    // Add Owner
     if (config.ownerNumber) targetJids.add(`${config.ownerNumber}@s.whatsapp.net`);
-    
-    // Add Super-Sudo and Sudo users
     for (const num of [...(settings.superSudo || []), ...(settings.sudo || [])]) {
         targetJids.add(`${num}@s.whatsapp.net`);
     }
@@ -436,26 +436,38 @@ async function sendReconnectNotification(sock, settings, config) {
                  `🔤 *Prefix:* ${settings.prefixes.join(' ')}\n\n` +
                  `Select an option below:`;
 
-    // We use Baileys' built-in buttons
     const buttons = [
-        { buttonId: `${prefix}ping`, buttonText: { displayText: '🏓 Ping' }, type: 1 },
-        { buttonId: `${prefix}owner`, buttonText: { displayText: '👤 Owner' }, type: 1 },
-        { buttonId: `${prefix}menu`, buttonText: { displayText: '📋 Menu' }, type: 1 }
+        { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "🏓 Ping", id: `${prefix}ping` }) },
+        { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "👤 Owner", id: `${prefix}owner` }) },
+        { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "📋 Menu", id: `${prefix}menu` }) }
     ];
+
+    // 👇 REPLACE THIS WITH YOUR IMAGE URL (Must be a static JPG/PNG) 👇
+    const customImageUrl = 'https://i.imgur.com/your-image-link.jpg';
 
     for (const jid of targetJids) {
         try {
             await sock.sendMessage(jid, { 
-                text: text,
-                footer: '*⚡ FAST • STABLE • POWERFUL*\n | _ Powered by @ZyberDevPriest™_',
-                buttons: buttons,
-                headerType: 1
+                image: { url: customImageUrl },
+                caption: text, // Note: For images, 'text' becomes 'caption'
+                footer: '*⚡ FAST • STABLE • POWERFUL*\n_Powered by @ZyberDevPriest™_', 
+                interactiveButtons: buttons
             });
             console.log(`✅ Reconnect notification sent to ${jid}`);
         } catch (e) {
-            console.error(`❌ Failed to send buttons to ${jid}:`, e.message);
-            // Fallback: Send plain text if buttons fail
-            await sock.sendMessage(jid, { text: text });
+            console.error(`❌ Failed to send image+buttons to ${jid}:`, e.message);
+            
+            // Fallback 1: Try text + buttons
+            try {
+                await sock.sendMessage(jid, { 
+                    text: text, 
+                    footer: '*⚡ FAST • STABLE • POWERFUL*\n_Powered by @ZyberDevPriest™_', 
+                    interactiveButtons: buttons 
+                });
+            } catch (fallbackErr) {
+                // Fallback 2: Plain text
+                await sock.sendMessage(jid, { text: text });
+            }
         }
     }
 }
