@@ -31,12 +31,14 @@ module.exports = {
             const data = await res.json();
             console.log('OCR RESPONSE:', JSON.stringify(data).slice(0, 200));
 
-            if (!data.success || !data.words_result || data.words_result.length === 0) {
+            // UAPI returns the text in data.text or data.plain_text
+            const extractedText = data.text || data.plain_text;
+
+            if (!extractedText) {
                 throw new Error('No text found in the image.');
             }
 
-            const text = data.words_result.map(item => item.words).join('\n');
-            await sock.sendMessage(ctx.sender, { text: `📄 *Extracted Text:*\n\n${text}` });
+            await sock.sendMessage(ctx.sender, { text: `📄 *Extracted Text:*\n\n${extractedText}` });
         } catch (e) {
             await sock.sendMessage(ctx.sender, { text: '❌ OCR Error: ' + e.message });
         }

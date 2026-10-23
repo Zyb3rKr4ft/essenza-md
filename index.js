@@ -259,10 +259,13 @@ async function startEssenza() {
         const isSelfChat = msg.key.fromMe && (senderNumber === botNumber || senderNumber === botLid);
         const isIncoming = !msg.key.fromMe;
 
-        const text = msg.message.conversation ||
-                     msg.message.extendedTextMessage?.text ||
-                     msg.message.imageMessage?.caption ||
-                     msg.message.videoMessage?.caption || '';
+	const text = msg.message.conversation ||
+        	     msg.message.extendedTextMessage?.text ||
+            	     msg.message.imageMessage?.caption ||
+	             msg.message.videoMessage?.caption ||
+	             msg.message.buttonsResponseMessage?.selectedButtonId ||
+	             msg.message.templateButtonReplyMessage?.selectedId ||
+	             msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
 
         // Multi-Prefix detection
         const activePrefixes = Array.isArray(settings.prefixes) ? settings.prefixes : [settings.prefix || config.prefix];
