@@ -1,3 +1,4 @@
+process.env.PATH = process.cwd() + ':' + process.env.PATH;
 const { sendButtons } = require('gifted-btns');
 const baileys = require('@whiskeysockets/baileys');
 const pino = require('pino');
