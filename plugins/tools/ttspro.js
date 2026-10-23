@@ -1,36 +1,12 @@
+const fetch = globalThis.fetch;
 const { exec } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { synthesize } = require('@echristian/edge-tts');
 
 const VOICES = {
-    // Nigerian
-    'ng-female': { id: 'en-NG-EzinneNeural', desc: 'Nigerian Female' },
-    'ng-male': { id: 'en-NG-AbeoNeural', desc: 'Nigerian Male' },
-    // Ghanaian
-    'gh-female': { id: 'en-GH-AmaNeural', desc: 'Ghanaian Female' },
-    'gh-male': { id: 'en-GH-KwameNeural', desc: 'Ghanaian Male' },
-    // Kenyan
-    'ke-female': { id: 'en-KE-AsiliaNeural', desc: 'Kenyan Female' },
-    'ke-male': { id: 'en-KE-ChilembaNeural', desc: 'Kenyan Male' },
-    // South African
-    'za-female': { id: 'af-ZA-AdriNeural', desc: 'South African Female' },
-    'za-male': { id: 'af-ZA-WillemNeural', desc: 'South African Male' },
-    // Arabic
-    'ae-female': { id: 'ar-AE-FatimaNeural', desc: 'Arabic (UAE) Female' },
-    'ae-male': { id: 'ar-AE-HamdanNeural', desc: 'Arabic (UAE) Male' },
-    'eg-female': { id: 'ar-EG-SalmaNeural', desc: 'Arabic (Egypt) Female' },
-    'eg-male': { id: 'ar-EG-ShakirNeural', desc: 'Arabic (Egypt) Male' },
-    // Global
-    'us-female': { id: 'en-US-AriaNeural', desc: 'US Female' },
-    'us-male': { id: 'en-US-GuyNeural', desc: 'US Male' },
-    'uk-female': { id: 'en-GB-SoniaNeural', desc: 'UK Female' },
-    'uk-male': { id: 'en-GB-RyanNeural', desc: 'UK Male' },
-    'in-female': { id: 'en-IN-NeerjaNeural', desc: 'Indian Female' },
-    'in-male': { id: 'en-IN-PrabhatNeural', desc: 'Indian Male' },
-    'au-female': { id: 'en-AU-NatashaNeural', desc: 'Australian Female' },
-    'au-male': { id: 'en-AU-WilliamNeural', desc: 'Australian Male' }
+    'us-female': 'Salli', 'us-male': 'Joey', 'uk-male': 'Brian', 'uk-female': 'Emma',
+    'in-female': 'Raveena', 'au-female': 'Nicole', 'au-male': 'Russell'
 };
 
 function run(cmd) {
@@ -44,10 +20,9 @@ function run(cmd) {
 
 async function convertToOgg(inputBuffer) {
     const stamp = Date.now();
-    const inFile = path.join(os.tmpdir(), `ttspro_in_${stamp}.mp3`);
-    const outFile = path.join(os.tmpdir(), `ttspro_out_${stamp}.ogg`);
+    const inFile = path.join(os.tmpdir(), `ttsp_in_${stamp}.mp3`);
+    const outFile = path.join(os.tmpdir(), `ttsp_out_${stamp}.ogg`);
     fs.writeFileSync(inFile, inputBuffer);
-    
     try {
         await run(`ffmpeg -y -hide_banner -loglevel error -i "${inFile}" -c:a libopus -b:a 64k -ar 48000 -ac 1 -f ogg "${outFile}"`);
         return fs.readFileSync(outFile);
@@ -60,10 +35,10 @@ async function convertToOgg(inputBuffer) {
 module.exports = {
     name: 'ttspro',
     category: 'tools',
-    description: 'Advanced TTS with global accents',
-    aliases: ['speakpro', 'saypro'],
+    description: 'Advanced TTS with accents',
+    aliases: ['speakpro'],
     async execute(sock, msg, args, ctx) {
-        let voiceKey = 'ng-female'; // Default
+        let voiceKey = 'us-male';
         let textArgs = args;
 
         if (args[0] && VOICES[args[0].toLowerCase()]) {
@@ -72,51 +47,21 @@ module.exports = {
         }
 
         const text = textArgs.join(' ').trim();
+        if (!text) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'ttspro [voice] <text>' });
 
-        if (!text) {
-            let voiceList = '🌍 *TTS Pro - Available Voices:*\n\n';
-            for (const [key, val] of Object.entries(VOICES)) {
-                voiceList += `• \`${key}\` - ${val.desc}\n`;
-            }
-            return sock.sendMessage(ctx.sender, { 
-                text: 'Usage: ' + ctx.prefix + 'ttspro [voice] <text>\n\n' + voiceList + '\nExample: ' + ctx.prefix + 'ttspro gh-male Chale, let\'s go.' 
-            });
-        }
-
-        await sock.sendMessage(ctx.sender, { text: `🗣️ Generating (${VOICES[voiceKey].desc})...` });
+        await sock.sendMessage(ctx.sender, { text: `🗣️ Generating (${VOICES[voiceKey]})...` });
 
         try {
-            const voiceId = VOICES[voiceKey].id;
+            const apiUrl = `https://api.streamelements.com/kappa/v2/speech?voice=${VOICES[voiceKey]}&text=${encodeURIComponent(text)}`;
+            const res = await fetch(apiUrl, { signal: AbortSignal.timeout(30000) });
+            if (!res.ok) throw new Error('API failed');
             
-            const { audio } = await synthesize({
-                text: text,
-                voice: voiceId,
-                outputFormat: 'audio-24khz-48kbitrate-mono-mp3'
-            });
-
-            const rawBuffer = Buffer.from(audio);
+            const rawBuffer = Buffer.from(await res.arrayBuffer());
             const oggBuffer = await convertToOgg(rawBuffer);
-            console.log(`TTS Pro (${voiceId}) generated: ` + (oggBuffer.length / 1024).toFixed(1) + ' KB');
 
-            try {
-                await sock.sendMessage(ctx.sender, {
-                    audio: oggBuffer,
-                    mimetype: 'audio/ogg; codecs=opus',
-                    ptt: true,
-                    fileName: 'ttspro.ogg'
-                });
-            } catch (sendErr) {
-                await sock.sendMessage(ctx.sender, {
-                    audio: oggBuffer,
-                    mimetype: 'audio/ogg; codecs=opus',
-                    ptt: false,
-                    fileName: 'ttspro.ogg'
-                });
-            }
-
+            await sock.sendMessage(ctx.sender, { audio: oggBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: true, fileName: 'ttspro.ogg' });
         } catch (e) {
-            console.log('TTS Pro error:', e.message);
-            await sock.sendMessage(ctx.sender, { text: '❌ TTS Pro Error: ' + e.message });
+            await sock.sendMessage(ctx.sender, { text: '❌ TTSPro Error: ' + e.message });
         }
     }
 };
