@@ -28,7 +28,8 @@ module.exports = {
 
         try {
             await sock.sendMessage(ctx.sender, { text: '🔍 Searching and downloading audio...' });
-            const downloadCmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "${target}"`;
+            // FORCING iOS CLIENT TO BYPASS DATACENTER BLOCK
+            const downloadCmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings --extractor-args "youtube:player_client=ios" -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "${target}"`;
             await run(downloadCmd);
             
             const files = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(`essenza_play_${stamp}.mp3`));

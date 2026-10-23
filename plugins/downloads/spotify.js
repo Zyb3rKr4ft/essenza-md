@@ -36,7 +36,8 @@ module.exports = {
             const outPattern = path.join(os.tmpdir(), `spotify_${stamp}.%(ext)s`);
             const ytdlp = process.env.YTDLP_PATH || 'yt-dlp';
 
-            const cmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "ytsearch1:${songName}"`;
+            // FORCING iOS CLIENT
+            const cmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings --extractor-args "youtube:player_client=ios" -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "ytsearch1:${songName}"`;
             await run(cmd);
 
             const files = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(`spotify_${stamp}.mp3`));

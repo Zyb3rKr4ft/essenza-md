@@ -1,12 +1,11 @@
 module.exports = {
-    name: 'tagall',
-    category: 'group',
-    aliases: ['everyone'],
-    groupOnly: true,
-    adminOnly: true,
+    name: 'tagall', category: 'group', description: 'Tag everyone and list their names', groupOnly: true, adminOnly: true,
     async execute(sock, msg, args, ctx) {
         const mentions = ctx.groupMetadata.participants.map(p => p.id);
-        const note = args.join(' ') || 'Attention everyone!';
-        await sock.sendMessage(ctx.sender, { text: note, mentions });
+        let text = `📢 *ATTENTION EVERYONE*\n\n${args.join(' ') || 'Hello!'}\n\n`;
+        ctx.groupMetadata.participants.forEach(p => {
+            text += `• @${p.id.split('@')[0]}\n`;
+        });
+        await sock.sendMessage(ctx.sender, { text, mentions });
     }
 };
