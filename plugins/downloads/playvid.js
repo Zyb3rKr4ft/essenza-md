@@ -1,4 +1,3 @@
-const yt = require('@denzy-official/youtube_scraper');
 const { exec } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -16,69 +15,38 @@ function run(cmd) {
 module.exports = {
     name: 'playvid',
     category: 'downloads',
-    description: 'Search and download video from YouTube',
-    aliases: ['video', 'ytvid'],
+    description: 'Download video from YouTube',
+    aliases: ['video'],
     async execute(sock, msg, args, ctx) {
         const input = args.join(' ').trim();
-        if (!input) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'playvid <song name or URL>' });
+        if (!input) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'playvid <song name>' });
 
-        await sock.sendMessage(ctx.sender, { text: '🔍 Searching YouTube...' });
+        const stamp = Date.now();
+        const outPattern = path.join(os.tmpdir(), `essenza_vid_${stamp}.%(ext)s`);
+        const ytdlp = process.env.YTDLP_PATH || 'yt-dlp';
+        const target = input.startsWith('http') ? input : `ytsearch1:${input}`;
 
         try {
-            const result = await yt.ytmp4(input);
-            if (!result.status || !result.download || !result.download.url) {
-                throw new Error('Could not extract video URL');
-            }
-
-            const title = result.metadata.title || 'YouTube Video';
-            const videoUrl = result.download.url;
+            await sock.sendMessage(ctx.sender, { text: '🔍 Searching and downloading video...' });
+            const downloadCmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings -f "bv*[height<=480]+ba/b[height<=480]/b" --merge-output-format mp4 -o "${outPattern}" "${target}"`;
+            await run(downloadCmd);
             
-            await sock.sendMessage(ctx.sender, { text: `📺 *${title}*\n⬇️ Downloading & converting...` });
+            const files = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(`essenza_vid_${stamp}.mp4`));
+            if (files.length === 0) throw new Error('Download failed');
+            const finalFile = path.join(os.tmpdir(), files[0]);
 
-            const res = await fetch(videoUrl, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                signal: AbortSignal.timeout(120000)
-            });
-            
-            if (!res.ok) throw new Error('Download failed: ' + res.status);
-            const rawBuffer = Buffer.from(await res.arrayBuffer());
-
-            const stamp = Date.now();
-            const rawFile = path.join(os.tmpdir(), `vid_raw_${stamp}.mp4`);
-            const finalFile = path.join(os.tmpdir(), `vid_final_${stamp}.mp4`);
-            fs.writeFileSync(rawFile, rawBuffer);
-
-            // Force H.264 and faststart so WhatsApp accepts it
-            await run(`ffmpeg -y -hide_banner -loglevel error -i "${rawFile}" -c:v libx264 -preset veryfast -crf 23 -c:a aac -movflags +faststart "${finalFile}"`);
-
-            const finalBuffer = fs.readFileSync(finalFile);
-            const sizeMB = (finalBuffer.length / 1024 / 1024).toFixed(1);
-            console.log('Video ready: ' + sizeMB + ' MB');
-
-            try { fs.unlinkSync(rawFile); } catch (e) {}
+            const buf = fs.readFileSync(finalFile);
+            const sizeMB = (buf.length / 1024 / 1024).toFixed(1);
             try { fs.unlinkSync(finalFile); } catch (e) {}
 
-            const safeTitle = title.replace(/[^\w\s-]/g, '').slice(0, 60);
+            const safeTitle = input.replace(/[^\w\s-]/g, '').slice(0, 60);
 
-            if (finalBuffer.length > 16 * 1024 * 1024) {
-                return sock.sendMessage(ctx.sender, {
-                    document: finalBuffer,
-                    mimetype: 'video/mp4',
-                    fileName: safeTitle + '.mp4',
-                    caption: '📺 ' + title + ' (' + sizeMB + ' MB)'
-                });
+            if (buf.length > 16 * 1024 * 1024) {
+                return sock.sendMessage(ctx.sender, { document: buf, mimetype: 'video/mp4', fileName: safeTitle + '.mp4', caption: '📺 ' + input + ' (' + sizeMB + ' MB)' });
             }
 
-            await sock.sendMessage(ctx.sender, {
-                video: finalBuffer,
-                mimetype: 'video/mp4',
-                caption: '📺 ' + title,
-                fileName: safeTitle + '.mp4',
-                gifPlayback: false
-            });
-            console.log('Video sent');
+            await sock.sendMessage(ctx.sender, { video: buf, mimetype: 'video/mp4', caption: '📺 ' + input, fileName: safeTitle + '.mp4', gifPlayback: false });
         } catch (e) {
-            console.log('PlayVid error:', e.message);
             await sock.sendMessage(ctx.sender, { text: '❌ PlayVid Error: ' + e.message });
         }
     }

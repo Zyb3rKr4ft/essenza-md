@@ -18,6 +18,7 @@
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "adm-zip": "^0.6.1",
     "btch-downloader": "^6.4.0",
+    "gifted-btns": "^1.0.2",
     "google-tts-api": "^2.0.2",
     "pino": "^10.3.1",
     "play-dl": "^1.9.7",

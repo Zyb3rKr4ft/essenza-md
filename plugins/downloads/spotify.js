@@ -16,23 +16,19 @@ module.exports = {
     name: 'spotify',
     category: 'downloads',
     description: 'Download a song from Spotify',
-    aliases: ['sp', 'spot'],
+    aliases: ['sp'],
     async execute(sock, msg, args, ctx) {
         const url = args[0];
-        if (!url || !url.includes('spotify.com')) {
-            return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'spotify <Spotify Track Link>' });
-        }
+        if (!url || !url.includes('spotify.com')) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'spotify <Spotify Track Link>' });
 
         await sock.sendMessage(ctx.sender, { text: '🔍 Fetching track details...' });
 
         try {
-            // Fetch the page to get the song title
             const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
             const html = await res.text();
             const titleMatch = html.match(/<title>([^<]+)<\/title>/);
             if (!titleMatch) throw new Error('Could not extract song name.');
             
-            // Title usually looks like "Song Name - song by Artist | Spotify"
             let songName = titleMatch[1].replace(' | Spotify', '').replace(' - song by', ' by');
             await sock.sendMessage(ctx.sender, { text: `🎵 Found: *${songName}*\n⬇️ Downloading via YouTube...` });
 
@@ -40,8 +36,7 @@ module.exports = {
             const outPattern = path.join(os.tmpdir(), `spotify_${stamp}.%(ext)s`);
             const ytdlp = process.env.YTDLP_PATH || 'yt-dlp';
 
-            // Download using yt-dlp searching YouTube
-            const cmd = `"${ytdlp}" --js-runtimes node --no-playlist --no-warnings --force-ipv4 --extractor-args "youtube:player_client=tv,web,android" -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "ytsearch1:${songName}"`;
+            const cmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "ytsearch1:${songName}"`;
             await run(cmd);
 
             const files = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(`spotify_${stamp}.mp3`));
@@ -50,12 +45,7 @@ module.exports = {
             const buf = fs.readFileSync(path.join(os.tmpdir(), files[0]));
             try { fs.unlinkSync(path.join(os.tmpdir(), files[0])); } catch (e) {}
 
-            await sock.sendMessage(ctx.sender, {
-                audio: buf,
-                mimetype: 'audio/mpeg',
-                ptt: false,
-                fileName: `${songName.replace(/[^\w\s-]/g, '')}.mp3`
-            });
+            await sock.sendMessage(ctx.sender, { audio: buf, mimetype: 'audio/mpeg', ptt: false, fileName: `${songName.replace(/[^\w\s-]/g, '')}.mp3` });
         } catch (e) {
             await sock.sendMessage(ctx.sender, { text: '❌ Spotify Error: ' + e.message });
         }

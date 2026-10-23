@@ -1,62 +1,46 @@
-const yt = require('@denzy-official/youtube_scraper');
+const { exec } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+function run(cmd) {
+    return new Promise((resolve, reject) => {
+        exec(cmd, { maxBuffer: 500 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
+            if (err) reject(new Error((stderr || err.message || '').split('\n').slice(-3).join(' | ')));
+            else resolve(stdout);
+        });
+    });
+}
 
 module.exports = {
     name: 'play',
     category: 'downloads',
     description: 'Search and play audio from YouTube',
-    aliases: ['song', 'music2'],
+    aliases: ['song'],
     async execute(sock, msg, args, ctx) {
         const input = args.join(' ').trim();
-        if (!input) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'play <song name or URL>' });
+        if (!input) return sock.sendMessage(ctx.sender, { text: 'Usage: ' + ctx.prefix + 'play <song name>' });
 
-        await sock.sendMessage(ctx.sender, { text: '🔍 Searching YouTube...' });
+        const stamp = Date.now();
+        const outPattern = path.join(os.tmpdir(), `essenza_play_${stamp}.%(ext)s`);
+        const ytdlp = process.env.YTDLP_PATH || 'yt-dlp';
+        const target = input.startsWith('http') ? input : `ytsearch1:${input}`;
 
         try {
-            // Search and get the direct MP3 URL
-            const result = await yt.ytmp3(input);
-            if (!result.status || !result.download || !result.download.url) {
-                throw new Error('Could not extract audio URL');
-            }
-
-            const title = result.metadata.title || 'YouTube Audio';
-            const audioUrl = result.download.url;
-            const sizeMB = (result.download.filesize / 1024 / 1024).toFixed(1);
+            await sock.sendMessage(ctx.sender, { text: '🔍 Searching and downloading audio...' });
+            const downloadCmd = `"${ytdlp}" --cookies cookies.txt --js-runtimes node --no-playlist --no-warnings -x --audio-format mp3 --audio-quality 5 -o "${outPattern}" "${target}"`;
+            await run(downloadCmd);
             
-            await sock.sendMessage(ctx.sender, { text: `🎵 *${title}*\n📦 ${sizeMB} MB\n⬇️ Downloading...` });
+            const files = fs.readdirSync(os.tmpdir()).filter(f => f.startsWith(`essenza_play_${stamp}.mp3`));
+            if (files.length === 0) throw new Error('Download failed');
+            const finalFile = path.join(os.tmpdir(), files[0]);
 
-            // Download the audio buffer
-            const res = await fetch(audioUrl, {
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-                signal: AbortSignal.timeout(60000)
-            });
-            
-            if (!res.ok) throw new Error('Download failed: ' + res.status);
-            const buffer = Buffer.from(await res.arrayBuffer());
-            
-            console.log('Audio downloaded: ' + (buffer.length / 1024 / 1024).toFixed(1) + ' MB');
+            const buf = fs.readFileSync(finalFile);
+            try { fs.unlinkSync(finalFile); } catch (e) {}
 
-            const safeTitle = title.replace(/[^\w\s-]/g, '').slice(0, 60);
-
-            // Try to send as audio, fallback to document
-            try {
-                await sock.sendMessage(ctx.sender, {
-                    audio: buffer,
-                    mimetype: 'audio/mpeg',
-                    ptt: false,
-                    fileName: safeTitle + '.mp3'
-                });
-                console.log('Audio sent');
-            } catch (sendErr) {
-                console.log('Audio upload failed, sending as document...');
-                await sock.sendMessage(ctx.sender, {
-                    document: buffer,
-                    mimetype: 'audio/mpeg',
-                    fileName: safeTitle + '.mp3',
-                    caption: '🎵 ' + title
-                });
-            }
+            const safeTitle = input.replace(/[^\w\s-]/g, '').slice(0, 60);
+            await sock.sendMessage(ctx.sender, { audio: buf, mimetype: 'audio/mpeg', ptt: false, fileName: safeTitle + '.mp3' });
         } catch (e) {
-            console.log('Play error:', e.message);
             await sock.sendMessage(ctx.sender, { text: '❌ Play Error: ' + e.message });
         }
     }

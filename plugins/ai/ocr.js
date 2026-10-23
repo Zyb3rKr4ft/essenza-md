@@ -1,15 +1,6 @@
 const baileys = require('@whiskeysockets/baileys');
 const fetch = globalThis.fetch;
 
-async function uploadToCatbox(buffer) {
-    const form = new FormData();
-    form.append('reqtype', 'fileupload');
-    form.append('fileToUpload', new Blob([buffer]), 'image.jpg');
-    const res = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Catbox upload failed');
-    return (await res.text()).trim();
-}
-
 module.exports = {
     name: 'ocr',
     category: 'ai',
@@ -28,18 +19,24 @@ module.exports = {
             let buffer = Buffer.from([]);
             for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
 
-            const imageUrl = await uploadToCatbox(buffer);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'image/jpeg' }), 'image.jpg');
             
-            // Using OmegaTech's All-Ai endpoint for OCR
-            const apiUrl = `https://api.omegatech.app/api/ai/All-Ai?action=ocr&imageUrl=${encodeURIComponent(imageUrl)}`;
-            const res = await fetch(apiUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(60000) });
+            const res = await fetch('https://uapis.cn/api/v1/image/ocr', {
+                method: 'POST',
+                body: form,
+                signal: AbortSignal.timeout(30000)
+            });
+            
             const data = await res.json();
+            console.log('OCR RESPONSE:', JSON.stringify(data).slice(0, 200));
 
-            console.log('OCR RESPONSE:', JSON.stringify(data, null, 2));
+            if (!data.success || !data.words_result || data.words_result.length === 0) {
+                throw new Error('No text found in the image.');
+            }
 
-            if (!data.success || !data.reply) throw new Error('No text found in the image.');
-
-            await sock.sendMessage(ctx.sender, { text: `📄 *Extracted Text:*\n\n${data.reply}` });
+            const text = data.words_result.map(item => item.words).join('\n');
+            await sock.sendMessage(ctx.sender, { text: `📄 *Extracted Text:*\n\n${text}` });
         } catch (e) {
             await sock.sendMessage(ctx.sender, { text: '❌ OCR Error: ' + e.message });
         }
