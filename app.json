@@ -1,0 +1,38 @@
+{
+  "name": "Essenza-MD",
+  "description": "Premium WhatsApp Bot Hosting",
+  "keywords": ["whatsapp", "bot", "essenza"],
+  "stack": "container",
+  "env": {
+    "SESSION_REPO": {
+      "description": "Your private GitHub repository for the session (e.g., username/essenza-session)",
+      "value": "",
+      "required": true
+    },
+    "SESSION_GITHUB_TOKEN": {
+      "description": "Your GitHub Personal Access Token (PAT) with repo access",
+      "value": "",
+      "required": true
+    },
+    "POLLINATIONS_API_KEY": {
+      "description": "Your Pollinations API key for AI features",
+      "value": "",
+      "required": true
+    },
+    "PAIRING_NUMBER": {
+      "description": "The WhatsApp number to pair (digits only, no +)",
+      "value": "",
+      "required": true
+    },
+    "OWNER_NUMBER": {
+      "description": "Your personal WhatsApp number (for owner commands)",
+      "value": "",
+      "required": true
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs.git"
+    }
+  ]
+}

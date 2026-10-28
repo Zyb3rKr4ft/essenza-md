@@ -60,6 +60,26 @@ async function react(sock, msg, emoji) {
 async function startEssenza() {
     // Restore session from GitHub if local folder is empty
     await githubSession.restoreIfNeeded(config.sessionPath);
+// --- SESSION ID DECODER ---
+if (process.env.SESSION_ID) {
+    try {
+        console.log('🔐 Found SESSION_ID environment variable. Decoding...');
+        const sessionData = Buffer.from(process.env.SESSION_ID, 'base64').toString('utf-8');
+        const files = JSON.parse(sessionData);
+        
+        if (!fs.existsSync(config.sessionPath)) {
+            fs.mkdirSync(config.sessionPath, { recursive: true });
+        }
+        
+        for (const [filename, content] of Object.entries(files)) {
+            fs.writeFileSync(path.join(config.sessionPath, filename), Buffer.from(content, 'base64'));
+        }
+        console.log('✅ Session restored from SESSION_ID successfully!');
+    } catch (e) {
+        console.error('❌ Failed to decode SESSION_ID:', e.message);
+    }
+}
+// --------------------------
 
     const { state, saveCreds } = await baileys.useMultiFileAuthState(config.sessionPath);
 
